@@ -32,7 +32,7 @@ Photo by <a href="https://unsplash.com/@johndoe">John Doe</a> on <a href="https:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/unsplash-mcp.git
+git clone https://github.com/cevatkerim/unsplash-mcp.git
 cd unsplash-mcp
 
 # Create virtual environment
@@ -232,6 +232,12 @@ MIT License - See [LICENSE](LICENSE) file.
 ## Contributing
 
 Contributions welcome! Please feel free to submit a Pull Request.
+
+## Support
+
+If you find this project useful, consider buying me a coffee!
+
+<a href="https://www.buymeacoffee.com/cevatkerim" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 ## Acknowledgments
 
