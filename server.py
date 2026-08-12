@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Unsplash MCP Server with local stdio and remote HTTP transport support."""
+"""Unsplash MCP Server with local stdio and authenticated remote HTTP support."""
 
+import hmac
 import os
 from dataclasses import dataclass
 from typing import Optional, List, Dict, Union
@@ -8,11 +9,27 @@ from typing import Optional, List, Dict, Union
 import httpx
 from dotenv import load_dotenv
 from fastmcp import FastMCP
+from fastmcp.server.auth.providers.debug import DebugTokenVerifier
 
 load_dotenv()
 
 UNSPLASH_API_BASE = "https://api.unsplash.com"
-mcp = FastMCP("Unsplash MCP Server")
+
+
+def _build_auth():
+    """Require MCP_API_KEY as a Bearer token for HTTP deployments when configured."""
+    api_key = os.getenv("MCP_API_KEY", "").strip()
+    if not api_key:
+        return None
+
+    return DebugTokenVerifier(
+        validate=lambda token: hmac.compare_digest(token, api_key),
+        client_id="unsplash-mcp-client",
+        scopes=["mcp:access"],
+    )
+
+
+mcp = FastMCP("Unsplash MCP Server", auth=_build_auth())
 
 
 @dataclass
@@ -236,6 +253,8 @@ def run_server() -> None:
     transport = os.getenv("MCP_TRANSPORT", "stdio").strip().lower()
 
     if transport in {"http", "streamable-http"}:
+        if not os.getenv("MCP_API_KEY", "").strip():
+            raise ValueError("MCP_API_KEY is required for HTTP transport.")
         host = os.getenv("MCP_HOST", "0.0.0.0")
         port = int(os.getenv("MCP_PORT", "8000"))
         mcp.run(transport="http", host=host, port=port)
