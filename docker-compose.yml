@@ -13,13 +13,13 @@ services:
     expose:
       - "8000"
     networks:
-      - proxy
+      - proxy_network
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
 
 networks:
-  proxy:
+  proxy_network:
     external: true
-    name: ${PROXY_NETWORK:-npm}
+    name: proxy_network
