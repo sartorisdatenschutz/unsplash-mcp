@@ -24,15 +24,12 @@ Create an Unsplash API application in the Unsplash developer portal and copy its
 ## MCP tools
 
 ### `search_photos`
-
 Search photos by keyword. Supports pagination, ordering, color, orientation and content filtering.
 
 ### `get_random_photos`
-
 Retrieve one or more random photos, optionally filtered by keyword and orientation.
 
 ### `track_download`
-
 Call Unsplash's download tracking endpoint for a selected photo and return its download URL.
 
 ## Local installation (stdio)
@@ -40,14 +37,11 @@ Call Unsplash's download tracking endpoint for a selected photo and return its d
 ```bash
 git clone https://github.com/sartorisdatenschutz/unsplash-mcp.git
 cd unsplash-mcp
-
 python3 -m venv .venv
 source .venv/bin/activate
 pip install .
-
 cp .env.example .env
 # Set UNSPLASH_ACCESS_KEY in .env
-
 python server.py
 ```
 
@@ -71,8 +65,6 @@ Example MCP client configuration:
 
 ## Remote HTTP operation
 
-Set:
-
 ```env
 UNSPLASH_ACCESS_KEY=your_access_key_here
 MCP_TRANSPORT=http
@@ -80,21 +72,13 @@ MCP_HOST=0.0.0.0
 MCP_PORT=8000
 ```
 
-Then run:
-
-```bash
-python server.py
-```
-
-The default FastMCP Streamable HTTP endpoint is:
+Then run `python server.py`. The default FastMCP Streamable HTTP endpoint is:
 
 ```text
 http://HOST:8000/mcp
 ```
 
 ## Docker
-
-Build and run locally:
 
 ```bash
 docker build -t unsplash-mcp .
@@ -108,34 +92,39 @@ The Docker image runs as an unprivileged user and includes a TCP health check.
 
 ## Portainer + Nginx Proxy Manager
 
-The included `docker-compose.yml` is intended for a Portainer Git repository stack. The MCP container does not publish port 8000 to the Docker host. Nginx Proxy Manager reaches it over a shared external Docker network.
+The included `docker-compose.yml` is intended for a Portainer Git repository stack. The MCP container does not publish port 8000 to the Docker host. Nginx Proxy Manager reaches it over the existing external Docker network `proxy_network`.
 
 ### 1. Shared proxy network
 
-Check the Docker network used by Nginx Proxy Manager:
+The deployment expects the existing external Docker network:
 
-```bash
-docker network ls
+```text
+proxy_network
 ```
 
-If you do not already have a suitable shared external network, create one and attach Nginx Proxy Manager to it:
+You can verify it with:
 
 ```bash
-docker network create npm
+docker network inspect proxy_network
 ```
 
-The compose file defaults to a network named `npm`. If your NPM network has another name, set `PROXY_NETWORK` accordingly in Portainer.
+Both Nginx Proxy Manager and `unsplash-mcp` must be attached to this network.
 
 ### 2. Portainer stack
 
-Create a new Portainer stack from this Git repository and set these environment variables:
+Create a new Portainer stack from this Git repository and set:
 
 ```env
 UNSPLASH_ACCESS_KEY=your_real_unsplash_access_key
-PROXY_NETWORK=npm
 ```
 
-Deploy the stack. The container should become healthy and be reachable as `unsplash-mcp:8000` from other containers on the proxy network.
+No proxy-network environment variable is required; `docker-compose.yml` references `proxy_network` directly.
+
+Deploy the stack. The container should become healthy and be reachable from Nginx Proxy Manager as:
+
+```text
+unsplash-mcp:8000
+```
 
 ### 3. Nginx Proxy Manager
 
@@ -170,7 +159,7 @@ The container uses the following hardening measures by default:
 - all Linux capabilities dropped
 - `no-new-privileges`
 - no published host port in the Portainer compose stack
-- dedicated shared proxy network
+- existing external `proxy_network`
 
 ## Environment variables
 
@@ -180,7 +169,6 @@ The container uses the following hardening measures by default:
 | `MCP_TRANSPORT` | `stdio` outside Docker | `stdio`, `http` or `streamable-http` |
 | `MCP_HOST` | `0.0.0.0` | HTTP bind address |
 | `MCP_PORT` | `8000` | HTTP listen port |
-| `PROXY_NETWORK` | `npm` | External Docker network used by Nginx Proxy Manager |
 
 ## Unsplash usage requirements
 
