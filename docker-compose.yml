@@ -1,0 +1,25 @@
+services:
+  unsplash-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: unsplash-mcp
+    restart: unless-stopped
+    environment:
+      UNSPLASH_ACCESS_KEY: ${UNSPLASH_ACCESS_KEY}
+      MCP_TRANSPORT: http
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8000
+    expose:
+      - "8000"
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+networks:
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:-npm}
