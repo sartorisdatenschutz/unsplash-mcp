@@ -1,245 +1,191 @@
 # Unsplash MCP Server
 
-An MCP (Model Context Protocol) server for fetching photos from [Unsplash](https://unsplash.com) with **proper attribution**. Designed for LLMs building content pages that need properly credited images.
+MCP server for searching Unsplash photos with attribution data built into every result. The repository supports both local `stdio` use and remote Streamable HTTP deployment with Docker, Portainer and Nginx Proxy Manager.
 
 ## Features
 
-- **Search Photos** - Find photos by keyword with filters (color, orientation)
-- **Random Photos** - Get random photos for variety in content
-- **Download Tracking** - Compliant with Unsplash API guidelines
-- **Full Attribution** - Every photo includes ready-to-use attribution text and HTML
-- **LLM-Optimized** - Pre-formatted attribution strings for easy embedding
+- Search Unsplash photos by keyword
+- Retrieve random photos
+- Trigger Unsplash download tracking
+- Return photographer and Unsplash attribution data
+- Local MCP operation over `stdio`
+- Remote MCP operation over Streamable HTTP
+- Docker/Portainer deployment
+- Designed for reverse-proxy operation behind Nginx Proxy Manager
 
-## Why This Server?
+## Requirements
 
-Unsplash requires proper attribution when using their photos. This server makes it easy by including:
+- Unsplash API access key
+- Python 3.11+ for local operation, or Docker for container operation
+- FastMCP 2.3+
 
-- `attribution_text`: Plain text like "Photo by John Doe on Unsplash"
-- `attribution_html`: Full HTML with proper links for web pages
+Create an Unsplash API application in the Unsplash developer portal and copy its access key.
 
-```html
-Photo by <a href="https://unsplash.com/@johndoe">John Doe</a> on <a href="https://unsplash.com">Unsplash</a>
-```
-
-## Installation
-
-### Prerequisites
-
-- Python 3.11+
-- An Unsplash API access key ([Get one here](https://unsplash.com/developers))
-
-### Quick Start
-
-```bash
-# Clone the repository
-git clone https://github.com/cevatkerim/unsplash-mcp.git
-cd unsplash-mcp
-
-# Create virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install fastmcp httpx python-dotenv
-
-# Set your API key
-echo "UNSPLASH_ACCESS_KEY=your_key_here" > .env
-
-# Run the server
-fastmcp run server.py
-```
-
-## Configuration
-
-### Claude Code
-
-Add to your `~/.claude.json` (user-level) or project `.mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "unsplash": {
-      "type": "stdio",
-      "command": "/path/to/unsplash-mcp/.venv/bin/fastmcp",
-      "args": ["run", "/path/to/unsplash-mcp/server.py"],
-      "env": {
-        "UNSPLASH_ACCESS_KEY": "your_access_key_here"
-      }
-    }
-  }
-}
-```
-
-### Cursor
-
-Add to your Cursor MCP settings:
-
-```json
-{
-  "mcpServers": {
-    "unsplash": {
-      "command": "/path/to/unsplash-mcp/.venv/bin/fastmcp",
-      "args": ["run", "/path/to/unsplash-mcp/server.py"],
-      "env": {
-        "UNSPLASH_ACCESS_KEY": "your_access_key_here"
-      }
-    }
-  }
-}
-```
-
-### Windsurf / Cline
-
-Add to your MCP configuration:
-
-```json
-{
-  "unsplash": {
-    "command": "/path/to/unsplash-mcp/.venv/bin/fastmcp",
-    "args": ["run", "/path/to/unsplash-mcp/server.py"],
-    "env": {
-      "UNSPLASH_ACCESS_KEY": "your_access_key_here"
-    }
-  }
-}
-```
-
-## Tools
+## MCP tools
 
 ### `search_photos`
 
-Search for photos by keyword with optional filters.
-
-**Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `query` | string | required | Search keyword(s) |
-| `page` | int | 1 | Page number |
-| `per_page` | int | 10 | Results per page (1-30) |
-| `order_by` | string | "relevant" | Sort: "relevant" or "latest" |
-| `color` | string | null | Color filter (see below) |
-| `orientation` | string | null | "landscape", "portrait", "squarish" |
-| `content_filter` | string | "low" | Safety: "low" or "high" |
-
-**Color options:** `black_and_white`, `black`, `white`, `yellow`, `orange`, `red`, `purple`, `magenta`, `green`, `teal`, `blue`
-
-**Example:**
-```
-search_photos("mountain sunset", per_page=5, orientation="landscape")
-```
+Search photos by keyword. Supports pagination, ordering, color, orientation and content filtering.
 
 ### `get_random_photos`
 
-Get random photos, optionally filtered by keyword.
-
-**Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `query` | string | null | Optional keyword filter |
-| `count` | int | 1 | Number of photos (1-30) |
-| `orientation` | string | null | "landscape", "portrait", "squarish" |
-| `content_filter` | string | "low" | Safety: "low" or "high" |
-
-**Example:**
-```
-get_random_photos(query="nature", count=3, orientation="landscape")
-```
+Retrieve one or more random photos, optionally filtered by keyword and orientation.
 
 ### `track_download`
 
-Track a photo download (required by Unsplash API guidelines).
+Call Unsplash's download tracking endpoint for a selected photo and return its download URL.
 
-**Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `photo_id` | string | Photo ID from search results |
+## Local installation (stdio)
 
-**Example:**
+```bash
+git clone https://github.com/sartorisdatenschutz/unsplash-mcp.git
+cd unsplash-mcp
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install .
+
+cp .env.example .env
+# Set UNSPLASH_ACCESS_KEY in .env
+
+python server.py
 ```
-track_download("abc123xyz")
-```
 
-## Response Format
+`stdio` is the default transport when `server.py` is run directly.
 
-Each photo includes:
+Example MCP client configuration:
 
-```python
+```json
 {
-    "id": "abc123",
-    "description": "A beautiful mountain landscape",
-    "alt_description": "snow-capped mountains under blue sky",
-    "urls": {
-        "raw": "https://images.unsplash.com/...",
-        "full": "https://images.unsplash.com/...",
-        "regular": "https://images.unsplash.com/...",  # Recommended for web
-        "small": "https://images.unsplash.com/...",
-        "thumb": "https://images.unsplash.com/..."
-    },
-    "width": 4000,
-    "height": 3000,
-    "color": "#a3c4f3",  # Dominant color for placeholders
-    "blur_hash": "LKO2?U%2Tw=w...",  # For progressive loading
-
-    # Attribution (REQUIRED when using the image)
-    "photographer_name": "John Doe",
-    "photographer_username": "johndoe",
-    "photographer_url": "https://unsplash.com/@johndoe?utm_source=...",
-    "photo_url": "https://unsplash.com/photos/abc123?utm_source=...",
-
-    # Ready-to-use attribution
-    "attribution_text": "Photo by John Doe on Unsplash",
-    "attribution_html": "Photo by <a href=\"...\">John Doe</a> on <a href=\"...\">Unsplash</a>"
+  "mcpServers": {
+    "unsplash": {
+      "command": "/path/to/unsplash-mcp/.venv/bin/python",
+      "args": ["/path/to/unsplash-mcp/server.py"],
+      "env": {
+        "UNSPLASH_ACCESS_KEY": "your_access_key_here"
+      }
+    }
+  }
 }
 ```
 
-## Usage Example
+## Remote HTTP operation
 
-When an LLM builds a content page:
+Set:
 
-1. Search for relevant images:
-   ```
-   photos = search_photos("coffee shop interior", per_page=5)
-   ```
+```env
+UNSPLASH_ACCESS_KEY=your_access_key_here
+MCP_TRANSPORT=http
+MCP_HOST=0.0.0.0
+MCP_PORT=8000
+```
 
-2. Select a photo and use it:
-   ```html
-   <img src="{photo.urls.regular}" alt="{photo.alt_description}">
-   <p class="attribution">{photo.attribution_html}</p>
-   ```
+Then run:
 
-3. If offering download, track it:
-   ```
-   download_url = track_download(photo.id)
-   ```
+```bash
+python server.py
+```
 
-## Unsplash API Guidelines
+The default FastMCP Streamable HTTP endpoint is:
 
-This server helps you comply with [Unsplash API guidelines](https://unsplash.com/api-terms):
+```text
+http://HOST:8000/mcp
+```
 
-1. **Attribution** - Always credit the photographer and Unsplash (use `attribution_html`)
-2. **Hotlinking** - Use the provided URLs directly (enables view tracking)
-3. **Download tracking** - Call `track_download()` when users download images
+## Docker
 
-## Rate Limits
+Build and run locally:
 
-- **Demo mode**: 50 requests/hour
-- **Production**: 5,000 requests/hour (after approval)
+```bash
+docker build -t unsplash-mcp .
+docker run --rm \
+  -e UNSPLASH_ACCESS_KEY=your_access_key_here \
+  -p 8000:8000 \
+  unsplash-mcp
+```
+
+The Docker image runs as an unprivileged user and includes a TCP health check.
+
+## Portainer + Nginx Proxy Manager
+
+The included `docker-compose.yml` is intended for a Portainer Git repository stack. The MCP container does not publish port 8000 to the Docker host. Nginx Proxy Manager reaches it over a shared external Docker network.
+
+### 1. Shared proxy network
+
+Check the Docker network used by Nginx Proxy Manager:
+
+```bash
+docker network ls
+```
+
+If you do not already have a suitable shared external network, create one and attach Nginx Proxy Manager to it:
+
+```bash
+docker network create npm
+```
+
+The compose file defaults to a network named `npm`. If your NPM network has another name, set `PROXY_NETWORK` accordingly in Portainer.
+
+### 2. Portainer stack
+
+Create a new Portainer stack from this Git repository and set these environment variables:
+
+```env
+UNSPLASH_ACCESS_KEY=your_real_unsplash_access_key
+PROXY_NETWORK=npm
+```
+
+Deploy the stack. The container should become healthy and be reachable as `unsplash-mcp:8000` from other containers on the proxy network.
+
+### 3. Nginx Proxy Manager
+
+Create a Proxy Host with:
+
+| Setting | Value |
+| --- | --- |
+| Domain | `mcp.example.com` |
+| Scheme | `http` |
+| Forward Hostname | `unsplash-mcp` |
+| Forward Port | `8000` |
+| Websockets Support | enabled |
+| Block Common Exploits | enabled |
+
+Request an SSL certificate, enable Force SSL and use the public MCP URL:
+
+```text
+https://mcp.example.com/mcp
+```
+
+Do not configure the NPM proxy host to strip `/mcp` from the request path.
+
+## Security
+
+The Unsplash access key is a server-side credential and must never be committed to Git. Configure it as an environment variable in Portainer.
+
+The MCP endpoint itself does **not** currently implement client authentication. Do not expose it publicly unless access is restricted by a trusted reverse proxy, VPN, firewall, identity-aware proxy or another authentication layer. Nginx Proxy Manager Access Lists can be suitable only when the MCP client supports the chosen authentication method.
+
+The container uses the following hardening measures by default:
+
+- non-root runtime user
+- all Linux capabilities dropped
+- `no-new-privileges`
+- no published host port in the Portainer compose stack
+- dedicated shared proxy network
+
+## Environment variables
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `UNSPLASH_ACCESS_KEY` | required | Unsplash API access key |
+| `MCP_TRANSPORT` | `stdio` outside Docker | `stdio`, `http` or `streamable-http` |
+| `MCP_HOST` | `0.0.0.0` | HTTP bind address |
+| `MCP_PORT` | `8000` | HTTP listen port |
+| `PROXY_NETWORK` | `npm` | External Docker network used by Nginx Proxy Manager |
+
+## Unsplash usage requirements
+
+When using images returned by this MCP server, follow the current Unsplash API requirements. The server returns attribution information and provides the `track_download` tool for download tracking.
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) file.
-
-## Contributing
-
-Contributions welcome! Please feel free to submit a Pull Request.
-
-## Support
-
-If you find this project useful, consider buying me a coffee!
-
-<a href="https://www.buymeacoffee.com/cevatkerim" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
-
-## Acknowledgments
-
-- [Unsplash](https://unsplash.com) for providing an amazing free photo API
-- [FastMCP](https://github.com/jlowin/fastmcp) for the MCP server framework
+MIT License. See `LICENSE`.
